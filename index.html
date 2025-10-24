@@ -77,11 +77,29 @@
     
 
     /* timeline */
-    .timeline{position:relative;padding-left:18px}
-    .timeline::before{content:"";position:absolute;left:6px;top:2px;bottom:2px;width:2px;background:linear-gradient(var(--acc),var(--acc-2))}
-    .step{position:relative;margin:0 0 14px}
-    .step::before{content:"";position:absolute;left:-12px;top:8px;width:14px;height:14px;border-radius:50%;
-      background:linear-gradient(135deg,var(--acc),var(--acc-2));box-shadow:0 0 0 3px rgba(122,24,58,.25)}
+    .timeline{
+      --tl-x:16px;        /* позиция вертикальной линии от левого края timeline */
+      --tl-gap:20px;      /* отступ текста от линии (используем и для маркера) */
+      position:relative;
+      display:flex;
+      flex-direction:column;          /* вертикальная шкала */
+      justify-content:space-between;  /* равномерно распределяем шаги */
+      gap:0;
+      padding:16px 0 16px calc(var(--tl-x) + var(--tl-gap));
+      min-height:clamp(420px,58vh,900px); /* длина — как согласовали */
+    }
+    .timeline::before{
+      content:"";position:absolute;left:var(--tl-x);top:0;bottom:0;width:2px;
+      background:linear-gradient(var(--acc),var(--acc-2));
+    }
+    .step{position:relative}
+    .step::before{
+      content:"";position:absolute;left:calc(-1 * var(--tl-gap) - 8px);top:.45em;width:16px;height:16px;border-radius:50%;
+      background:linear-gradient(135deg,var(--acc),var(--acc-2));
+      box-shadow:0 0 0 5px rgba(122,24,58,.22);
+    }
+    .step strong{display:block;margin:0 0 6px}
+    .step .hint{display:inline-block;margin-top:6px;color:var(--muted)}
 
     /* form */
     form{display:grid;gap:14px}
@@ -125,7 +143,7 @@
     <div class="container nav">
       <div class="brand"><div class="logo" aria-hidden="true"></div><h1>Деньги и Мозг</h1></div>
       <nav aria-label="Главная навигация">
-        <a href="#me">Обо мне<
+        <a href="#me">Обо мне<\/a>
         <a href="#tracks">Прогресс</a>
         <a href="#timeline">Условия</a>
         <a href="#prizes">Призы</a>
@@ -264,7 +282,7 @@
         <h3 class="section-title">Обо мне</h3>
         <div class="grid cols-2 me-grid">
           <div class="card reveal" style="padding:12px">
-            <img class="portrait" src="./assets/portrait.webp" alt="Обо мне — фото" loading="lazy" decoding="async">
+            <img class="portrait" src="portrait.webp" alt="Обо мне — фото" loading="lazy" decoding="async" />
           </div>
           <div class="card reveal">
             <p><em>Здесь будет ваш текст «Обо мне». Можете рассказать о себе, опыте, миссии и почему запустили проект «Деньги и Мозг».</em></p>
@@ -519,5 +537,3 @@
   </script>
 </body>
 </html>
-
-
