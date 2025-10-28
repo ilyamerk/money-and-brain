@@ -427,7 +427,7 @@
 
     const LS_KEY = 'startup_apply_draft_v1';
     // ТВОЙ Apps Script endpoint:
-    const endpoint = 'https://script.google.com/macros/s/AKfycbxCLSQUELxhOi282Vn2GIpFp33E-0d3nl2X5ms4ysWTxCTgtk6nImpZ_1xJwvfLJDkFeg/exec';
+    const endpoint = 'https://script.google.com/macros/s/AKfycbxJ1vnP3_n0b3tbm1vcsu8XV6nQoeunqNcLhLjamFrMZqb78q2MhZcQHrwwC02p-X4Wrg/exec';
 
     function showMsg(text, ok=true){
       statusBox.style.display='block';
@@ -497,41 +497,38 @@
     clearBtn.addEventListener('click', ()=>{ localStorage.removeItem(LS_KEY); clearForm(); });
 
     form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      if(!validate()) return;
-      sendBtn.disabled = true; showMsg('Отправляем заявку…');
+    e.preventDefault();
+    if(!validate()) return;
 
-      const payload = serialize();
+    sendBtn.disabled = true; showMsg('Отправляем заявку…');
 
-      try{
-        const res = await fetch(endpoint, {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json().catch(()=>({}));
-        if(!res.ok || data.ok !== true) throw new Error(data.error || ('HTTP '+res.status));
+    const payload = serialize();
+    // не отправляем consent в таблицу
+    if ('consent' in payload) delete payload.consent;
+    payload.user_agent = navigator.userAgent;
 
-        localStorage.removeItem(LS_KEY);
-        showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
-        clearForm();
-      }catch(err){
-        console.error(err);
-        showMsg('Не удалось отправить. Проверьте доступ веб-приложения (Anyone) и попробуйте снова.', false);
-      } finally {
-        sendBtn.disabled = false;
-      }
-    });
+    // ⚠️ ВАЖНО: кодируем как form-urlencoded, чтобы не было preflight
+    const body = new URLSearchParams(payload).toString();
 
-    // Автосохранение раз в 10 секунд
-    setInterval(()=>{
-      const anyFilled = Array.from(form.elements)
-        .some(el=>['INPUT','TEXTAREA','SELECT'].includes(el.tagName) && el.value);
-      if(anyFilled) saveDraft();
-    }, 10000);
+    try{
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok || data.ok !== true) throw new Error(data.error || ('HTTP '+res.status));
 
-    // При загрузке
-    loadDraft();
-  </script>
+      localStorage.removeItem('startup_apply_draft_v1');
+      showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
+      form.reset();
+    }catch(err){
+      console.error(err);
+      showMsg('Не удалось отправить. Проверь доступ веб-приложения (Anyone) и попробуй снова.', false);
+    }finally{
+      sendBtn.disabled = false;
+    }
+  });
+</script>
 </body>
 </html>
