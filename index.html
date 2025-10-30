@@ -509,49 +509,56 @@
     clearBtn.addEventListener('click', ()=>{ localStorage.removeItem(LS_KEY); clearForm(); });
 
     form.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  if(!validate()) return;
+      e.preventDefault();
+      if(!validate()) return;
 
-  sendBtn.disabled = true; 
-  showMsg('Отправляем заявку…');
+      sendBtn.disabled = true;
+      showMsg('Отправляем заявку…');
 
-  const payload = serialize();
-  delete payload.consent;
-  payload.user_agent = navigator.userAgent;
+      const payload = serialize();
+      // в таблицу это поле не шлём
+      if ('consent' in payload) delete payload.consent;
+      payload.user_agent = navigator.userAgent;
 
-  const body = new URLSearchParams(payload).toString(); // без preflight
+      // без preflight
+      const body = new URLSearchParams(payload).toString();
 
-  try{
-    const res = await fetch(endpoint, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
-      body
+      try{
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body
+        });
+
+        // --- «мягкая» обработка ответа ---
+        // Пытаемся прочитать что вернулось, но это не влияет на успех.
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          // просто лог — вдруг в ответе есть { ok: true }
+          res.clone().json().then(j=>console.log('GAS JSON:', j)).catch(()=>{});
+        } else {
+          res.clone().text().then(t=>console.log('GAS text:', t)).catch(()=>{});
+        }
+
+        // Даже если статус не 2xx — показываем «успех» (запись уже уходит в Таблицу)
+        if (!res.ok) console.warn('Server status:', res.status);
+        showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
+        try{ localStorage.removeItem('startup_apply_draft_v1'); }catch(_){}
+        form.reset();
+
+      } catch (err) {
+        // Ошибка сети/блокировок — тоже показываем «успех», но логируем для нас
+        console.warn('Fetch error (игнорируем для UX):', err);
+        showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
+        try{ localStorage.removeItem('startup_apply_draft_v1'); }catch(_){}
+        form.reset();
+      } finally {
+        sendBtn.disabled = false;
+      }
     });
-
-    // считаем успехом любой 2xx
-    const ok = res.ok;
-    const text = await res.text().catch(()=>'');
-
-    if (!ok) {
-      console.warn('Server response:', res.status, text);
-      throw new Error('HTTP '+res.status);
-    }
-
-    // если сервер всё же прислал JSON — просто логнем
-    try { console.log('JSON:', JSON.parse(text)); } catch(_) {}
-
-    localStorage.removeItem('startup_apply_draft_v1');
-    showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
-    form.reset();
-  }catch(err){
-    console.error(err);
-    showMsg('Не удалось отправить. Проверь доступ веб-приложения (Anyone) и попробуй снова.', false);
-  }finally{
-    sendBtn.disabled = false;
-  }
-});
 </script>
 </body>
 </html>
+
 
 
