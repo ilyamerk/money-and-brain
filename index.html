@@ -509,47 +509,49 @@
     clearBtn.addEventListener('click', ()=>{ localStorage.removeItem(LS_KEY); clearForm(); });
 
     form.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    if(!validate()) return;
+  e.preventDefault();
+  if(!validate()) return;
 
-    sendBtn.disabled = true;
-    showMsg('Отправляем заявку…');
+  sendBtn.disabled = true; 
+  showMsg('Отправляем заявку…');
 
-    const payload = serialize();
-    delete payload.consent;                    // не пишем согласие
-    payload.user_agent = navigator.userAgent;
+  const payload = serialize();
+  delete payload.consent;
+  payload.user_agent = navigator.userAgent;
 
-    // без preflight
-    const body = new URLSearchParams(payload).toString();
+  const body = new URLSearchParams(payload).toString(); // без preflight
 
-    try{
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body
-      });
+  try{
+    const res = await fetch(endpoint, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+      body
+    });
 
-      // мягкий разбор ответа: пробуем JSON, иначе просто текст
-      let okFlag = res.ok;
-      const ct = res.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        const data = await res.json().catch(()=>null);
-        if (data && data.ok === true) okFlag = true;
-      }
+    // считаем успехом любой 2xx
+    const ok = res.ok;
+    const text = await res.text().catch(()=>'');
 
-      if (!okFlag) throw new Error('Bad response: ' + res.status);
-
-      localStorage.removeItem('startup_apply_draft_v1');
-      showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
-      form.reset();
-    } catch (err) {
-      console.error(err);
-      showMsg('Не удалось отправить. Проверь доступ веб-приложения (Anyone) или попробуй снова.', false);
-    } finally {
-      sendBtn.disabled = false;
+    if (!ok) {
+      console.warn('Server response:', res.status, text);
+      throw new Error('HTTP '+res.status);
     }
-  });
+
+    // если сервер всё же прислал JSON — просто логнем
+    try { console.log('JSON:', JSON.parse(text)); } catch(_) {}
+
+    localStorage.removeItem('startup_apply_draft_v1');
+    showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
+    form.reset();
+  }catch(err){
+    console.error(err);
+    showMsg('Не удалось отправить. Проверь доступ веб-приложения (Anyone) и попробуй снова.', false);
+  }finally{
+    sendBtn.disabled = false;
+  }
+});
 </script>
 </body>
 </html>
+
 
