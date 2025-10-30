@@ -512,14 +512,14 @@
     e.preventDefault();
     if(!validate()) return;
 
-    sendBtn.disabled = true; showMsg('Отправляем заявку…');
+    sendBtn.disabled = true;
+    showMsg('Отправляем заявку…');
 
     const payload = serialize();
-    // не отправляем consent в таблицу
-    if ('consent' in payload) delete payload.consent;
+    delete payload.consent;                    // не пишем согласие
     payload.user_agent = navigator.userAgent;
 
-    // ⚠️ ВАЖНО: кодируем как form-urlencoded, чтобы не было preflight
+    // без preflight
     const body = new URLSearchParams(payload).toString();
 
     try{
@@ -528,20 +528,27 @@
         headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
         body
       });
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok || data.ok !== true) throw new Error(data.error || ('HTTP '+res.status));
+
+      // мягкий разбор ответа: пробуем JSON, иначе просто текст
+      let okFlag = res.ok;
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const data = await res.json().catch(()=>null);
+        if (data && data.ok === true) okFlag = true;
+      }
+
+      if (!okFlag) throw new Error('Bad response: ' + res.status);
 
       localStorage.removeItem('startup_apply_draft_v1');
       showMsg('Заявка отправлена! Мы свяжемся с вами по e-mail.', true);
       form.reset();
-    }catch(err){
+    } catch (err) {
       console.error(err);
-      showMsg('Не удалось отправить. Проверь доступ веб-приложения (Anyone) и попробуй снова.', false);
-    }finally{
+      showMsg('Не удалось отправить. Проверь доступ веб-приложения (Anyone) или попробуй снова.', false);
+    } finally {
       sendBtn.disabled = false;
     }
   });
 </script>
 </body>
 </html>
-
